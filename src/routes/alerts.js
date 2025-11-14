@@ -1,8 +1,65 @@
 import { Router } from "express";
 import { desmarkAlert, getActiveAlerts, getCurrentPrice, markAlertAsSent } from "../services/alerts.js";
 import { sendPriceAlertEmail } from "../services/mailer.js";
+// 🚨 SOLUCIÓN: IMPORTAR LA VARIABLE SUPABASE
+import { supabase } from '../services/supabase.js';
 
 const router = Router();
+
+// ------------------------------------------------------------------
+// 🎯 Endpoint: Activar/Crear Alarma (Usando UPSERT)
+// ------------------------------------------------------------------
+router.post('/upsert-activate', async (req, res) => {
+
+    console.log('Cliente de Supabase importado:', !!supabase); 
+    console.log('Intentando UPSERT con datos:', req.body);
+
+    // 1. Obtener los datos necesarios desde React
+    const { 
+        idUsuario, 
+        idMedicamento,
+        precioAlarma 
+    } = req.body;
+
+    // 2. Validación básica
+    if (!idUsuario || !idMedicamento || !precioAlarma) {
+        return res.status(400).json({ error: 'Faltan parámetros (usuario, medicamento o precio) para crear/activar la alarma.' });
+    }
+
+    try {
+        
+        const { data, error } = await supabase
+            .from('alertas')
+            .upsert({
+                // 🚨 CORRECCIÓN AQUÍ: Usamos 'usuario_id' para ser coherentes con 'onConflict'
+                id_usuario: idUsuario,
+                id_medicamento: idMedicamento,
+                valor_al_activar: precioAlarma,
+                activo: true 
+            }, {
+                // La clave de conflicto:
+                onConflict: 'id_usuario, id_medicamento', 
+                ignoreDuplicates: false
+            })
+            .select();
+
+        if (error) {
+            // 🚨 Ahora deberías ver el error completo en tu consola si hay otro problema.
+            console.error('Error en UPSERT de Supabase:', JSON.stringify(error, null, 2)); 
+            
+            return res.status(500).json({ error: 'Fallo al procesar la alarma en la base de datos.', details: error.message });
+        }
+
+        // 4. Éxito:
+        return res.status(200).json({ 
+            message: 'Alarma creada/activada con éxito.',
+            data: data[0]
+        });
+
+    } catch (error) {
+        res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+});
 
 router.post("/run", async (req, res) => {
   try {

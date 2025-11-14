@@ -12,6 +12,7 @@ if (!supabaseUrl || !supabaseKey) {
   throw new Error('SUPABASE_URL and SUPABASE_KEY must be set in environment variables');
 }
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+// 🚨 La línea CLAVE debe ser 'export const'
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
 export default supabase;

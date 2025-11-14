@@ -1,15 +1,16 @@
-// src/index.js
+// src/index.js (Versión limpia)
+
+// 🚨 Ya no necesitamos el bloque if/require aquí.
+// El comando de arranque se encarga de esto.
+
 import express from 'express';
 import alertsRouter from './routes/alerts.js';
-
-// Solo cargar dotenv en desarrollo
-if (process.env.NODE_ENV !== 'production') {
-  const dotenv = await import('dotenv');
-  dotenv.config();
-}
+// ... el resto del código
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3001; // Las variables ya están disponibles aquí
+
+// ... (El resto de tu código es funcional)
 
 // Middlewares
 app.use(express.json());

@@ -108,3 +108,4 @@ export async function desmarkAlert(alertId) {
 
   return true;
 }
+

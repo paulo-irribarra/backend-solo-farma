@@ -13,7 +13,7 @@ export async function sendPriceAlertEmail(emailData) {
 
     await resend.emails.send({
       from: "SoloFarma <onboarding@resend.dev>",
-      to: to,
+      to: "pau.irribarra@duocuc.cl",
       subject: `📉 ¡${medicamento.nombre} bajó de precio!`,
       html: `
         <!DOCTYPE html>
