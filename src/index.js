@@ -1,32 +1,37 @@
-// src/index.js (Versión limpia)
-
-// 🚨 Ya no necesitamos el bloque if/require aquí.
-// El comando de arranque se encarga de esto.
+// src/index.js (Versión con orden corregido)
 
 import express from 'express';
 import alertsRouter from './routes/alerts.js';
+import cors from 'cors';
 // ... el resto del código
 
 const app = express();
-const PORT = process.env.PORT || 3001; // Las variables ya están disponibles aquí
+const PORT = process.env.PORT || 3001; 
 
-// ... (El resto de tu código es funcional)
+// --------------------------------------------------
+// 🚨 ORDEN CORREGIDO DE MIDDLEWARES 🚨
+// --------------------------------------------------
 
-// Middlewares
-app.use(express.json());
+// 1. CORS: Debe ir primero para permitir la conexión.
+app.use(cors()); 
+
+// 2. JSON: Debe ir antes de cualquier ruta que use req.body (como tu UPSERT).
+app.use(express.json()); 
 
 // Health check
 app.get('/', (req, res) => {
-  res.json({ 
-    message: 'SoloFarma API running 🚀',
-    environment: process.env.NODE_ENV || 'development'
-  });
+  res.json({ 
+    message: 'SoloFarma API running 🚀',
+    environment: process.env.NODE_ENV || 'development'
+  });
 });
 
-// Routes
+// 3. Routes: Las rutas se procesan al final.
 app.use('/api/alerts', alertsRouter);
 
+// --------------------------------------------------
+
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });

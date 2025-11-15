@@ -9,56 +9,110 @@ const router = Router();
 // ------------------------------------------------------------------
 // 🎯 Endpoint: Activar/Crear Alarma (Usando UPSERT)
 // ------------------------------------------------------------------
-router.post('/upsert-activate', async (req, res) => {
+router.post('/toggle', async (req, res) => {
+    
+    // 1. Obtener los datos necesarios
+    const { 
+        idUsuario, 
+        idMedicamento,
+        precioAlarma, 
+        activo // Estado deseado: true (activar) o false (desactivar)
+    } = req.body;
 
-    console.log('Cliente de Supabase importado:', !!supabase); 
-    console.log('Intentando UPSERT con datos:', req.body);
+    // 2. Validación de la existencia de campos
+    // Verificamos que los campos obligatorios NO sean 'undefined'.
+    if (activo === true) {
+    // Lógica 1: ACTIVAR (UPSERT)
+    
+    const { data, error } = await supabase
+        .from('alertas') // 🚨 Nombre de la tabla según tu diagrama
+        .upsert({
+            // 🚨 CORRECCIÓN 1: Usar 'id_usuario' y 'valor_al_activar'
+            id_usuario: idUsuario,        
+            id_medicamento: idMedicamento, 
+            valor_al_activar: precioAlarma, // Nombre de columna corregido
+            activo: true 
+        }, { 
+            // 🚨 CORRECCIÓN 2: Usar 'id_usuario' en el onConflict
+            onConflict: 'id_usuario, id_medicamento' 
+        })
+        .select()
+        .limit(1);
+        
+      if (error) throw error;
+    
+      // 🚨 CORRECCIÓN DEL RESPONSE: Retorna data o null si está vacío (aunque no debería)
+      return res.status(200).json({ 
+        message: 'Alarma activada con éxito.', 
+        data: data ? data[0] : null
+      });
+    
+    // ... (manejo de error y response)
+    
+} else {
+    // Lógica 2: DESACTIVAR (UPDATE)
+    
+    const { error } = await supabase
+        .from('alertas') // 🚨 Nombre de la tabla según tu diagrama
+        .update({ activo: false })
+        .eq('id_usuario', idUsuario) // 🚨 CORRECCIÓN: usar 'id_usuario'
+        .eq('id_medicamento', idMedicamento);
 
-    // 1. Obtener los datos necesarios desde React
-    const { 
-        idUsuario, 
-        idMedicamento,
-        precioAlarma 
-    } = req.body;
+    // ... (manejo de error y response)
+}
 
-    // 2. Validación básica
-    if (!idUsuario || !idMedicamento || !precioAlarma) {
-        return res.status(400).json({ error: 'Faltan parámetros (usuario, medicamento o precio) para crear/activar la alarma.' });
-    }
+    try {
+        let dbResponse; // Variable para almacenar la respuesta de Supabase
+        
+        if (activo === true) {
+            // Lógica 1: ACTIVAR (Usamos UPSERT para crear si no existe o actualizar si ya existe)
+            
+            dbResponse = await supabase
+                .from('alarma')
+                .upsert({
+                    id_usuario: idUsuario,        // Clave de conflicto
+                    id_medicamento: idMedicamento, // Clave de conflicto
+                    precio_monitoreo: precioAlarma, // Precio que se guarda
+                    activo: true // Siempre true en este bloque
+                }, { onConflict: 'usuario_id, id_medicamento' })
+                .select(); 
+            
+            // La respuesta de éxito contiene el registro afectado
+            return res.status(200).json({ 
+                message: 'Alarma activada con éxito.', 
+                data: dbResponse.data ? dbResponse.data[0] : null
+            });
 
-    try {
-        
-        const { data, error } = await supabase
-            .from('alertas')
-            .upsert({
-                // 🚨 CORRECCIÓN AQUÍ: Usamos 'usuario_id' para ser coherentes con 'onConflict'
-                id_usuario: idUsuario,
-                id_medicamento: idMedicamento,
-                valor_al_activar: precioAlarma,
-                activo: true 
-            }, {
-                // La clave de conflicto:
-                onConflict: 'id_usuario, id_medicamento', 
-                ignoreDuplicates: false
-            })
-            .select();
+        } else {
+            // Lógica 2: DESACTIVAR (Solo UPDATE, asumimos que el registro existe)
+            
+            dbResponse = await supabase
+                .from('alarma')
+                .update({ activo: false }) // Poner a false
+                .eq('usuario_id', idUsuario)
+                .eq('id_medicamento', idMedicamento)
+                .select(); // Opcional: obtener el registro actualizado
+                
+            return res.status(200).json({ 
+                message: 'Alarma desactivada con éxito.',
+                data: dbResponse.data ? dbResponse.data[0] : null 
+            });
+        }
 
-        if (error) {
-            // 🚨 Ahora deberías ver el error completo en tu consola si hay otro problema.
-            console.error('Error en UPSERT de Supabase:', JSON.stringify(error, null, 2)); 
-            
-            return res.status(500).json({ error: 'Fallo al procesar la alarma en la base de datos.', details: error.message });
-        }
-
-        // 4. Éxito:
-        return res.status(200).json({ 
-            message: 'Alarma creada/activada con éxito.',
-            data: data[0]
-        });
-
-    } catch (error) {
-        res.status(500).json({ error: 'Error interno del servidor.' });
-    }
+    } catch (error) {
+        // Capturamos cualquier error de Supabase o conexión
+        console.error('❌ Error crítico en toggle-activate:', error); 
+        
+        // Devolvemos el error completo a la consola para diagnóstico
+        if (error.code) {
+             console.error('Error de BD (Postgres):', error.message);
+        }
+        
+        return res.status(500).json({ 
+            error: 'Fallo al procesar la alarma.', 
+            details: error.message || 'Error de conexión con la base de datos.'
+        });
+    }
 });
 
 router.post("/run", async (req, res) => {
