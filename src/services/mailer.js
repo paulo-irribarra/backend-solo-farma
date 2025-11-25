@@ -5,15 +5,16 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export async function sendPriceAlertEmail(emailData) {
   try {
     const {
-      to,
+      to,          // 👈 correo del usuario (string o array)
       userName,
       medicamento,
       precios,
     } = emailData;
 
     await resend.emails.send({
-      from: "SoloFarma <onboarding@resend.dev>",
-      to: "pau.irribarra@duocuc.cl",
+      // OJO: corregido, antes estaba "alerts@notifications@solofarmacia.cl"
+      from: "SoloFarma <alerts@notifications.solofarmacia.cl>",
+      to, // 👈 ahora usa el parámetro que viene en emailData
       subject: `📉 ¡${medicamento.nombre} bajó de precio!`,
       html: `
         <!DOCTYPE html>
@@ -27,7 +28,6 @@ export async function sendPriceAlertEmail(emailData) {
             <tr>
               <td align="center">
                 <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                  
                   <!-- Header -->
                   <tr>
                     <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
@@ -35,7 +35,6 @@ export async function sendPriceAlertEmail(emailData) {
                       <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px;">El precio bajó</p>
                     </td>
                   </tr>
-                  
                   <!-- Saludo -->
                   <tr>
                     <td style="padding: 30px 40px 20px 40px;">
@@ -45,8 +44,7 @@ export async function sendPriceAlertEmail(emailData) {
                       </p>
                     </td>
                   </tr>
-                  
-                  <!-- Medicamento Info -->
+                  <!-- Info medicamento -->
                   <tr>
                     <td style="padding: 0 40px 20px 40px;">
                       <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8f9fa; border-radius: 8px; padding: 20px;">
@@ -67,8 +65,7 @@ export async function sendPriceAlertEmail(emailData) {
                       </table>
                     </td>
                   </tr>
-                  
-                  <!-- Comparación de Precios -->
+                  <!-- Comparación precios -->
                   <tr>
                     <td style="padding: 0 40px 30px 40px;">
                       <table width="100%" cellpadding="0" cellspacing="0">
@@ -93,8 +90,7 @@ export async function sendPriceAlertEmail(emailData) {
                       </table>
                     </td>
                   </tr>
-                  
-                  <!-- Ahorro Badge -->
+                  <!-- Ahorro -->
                   <tr>
                     <td style="padding: 0 40px 30px 40px; text-align: center;">
                       <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 50px; display: inline-block; padding: 15px 30px;">
@@ -104,8 +100,7 @@ export async function sendPriceAlertEmail(emailData) {
                       </div>
                     </td>
                   </tr>
-                  
-                  <!-- CTA Button -->
+                  <!-- Botón -->
                   <tr>
                     <td style="padding: 0 40px 30px 40px; text-align: center;">
                       <a href="${medicamento.urlMedicamento}" 
@@ -114,7 +109,6 @@ export async function sendPriceAlertEmail(emailData) {
                       </a>
                     </td>
                   </tr>
-                  
                   <!-- Footer -->
                   <tr>
                     <td style="padding: 20px 40px; background-color: #f8f9fa; text-align: center; border-top: 1px solid #e9ecef;">
@@ -126,7 +120,6 @@ export async function sendPriceAlertEmail(emailData) {
                       </p>
                     </td>
                   </tr>
-                  
                 </table>
               </td>
             </tr>
