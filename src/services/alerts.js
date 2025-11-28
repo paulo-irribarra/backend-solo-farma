@@ -1,3 +1,6 @@
+// ---------------------------------------------------
+// 1) Obtener alertas activas con toda la info necesaria
+// ---------------------------------------------------
 // src/services/alerts.js
 import supabase from "./supabase.js";
 
@@ -21,17 +24,33 @@ export async function getActiveAlerts() {
   }
 
   // 2. Obtener IDs únicos
-  const medicamentoIds = [...new Set(alertas.map(a => a.id_medicamento))];
-  const usuarioIds = [...new Set(alertas.map(a => a.id_usuario))];
+  const medicamentoIds = [...new Set(alertas.map((a) => a.id_medicamento))];
+  const usuarioIds = [...new Set(alertas.map((a) => a.id_usuario))];
 
-  // 3. Obtener medicamentos
+  // 3. Obtener medicamentos (tabla base)
   const { data: medicamentos, error: medicamentosError } = await supabase
     .from("medicamento")
-    .select("id_medicamento, nombre, farmacia, laboratorio, presentacion, url_medicamento, imagen_url")
+    .select(
+      "id_medicamento, nombre, laboratorio, presentacion, url_medicamento, imagen_url"
+    )
     .in("id_medicamento", medicamentoIds);
 
   if (medicamentosError) {
-    throw new Error("Error obteniendo medicamentos: " + medicamentosError.message);
+    throw new Error(
+      "Error obteniendo medicamentos: " + medicamentosError.message
+    );
+  }
+
+  // ⭐ 3.1. Obtener datos extra desde vista_productos (farmacia, precio, url)
+  const { data: productos, error: productosError } = await supabase
+    .from("vista_productos")
+    .select("id_medicamento, farmacia, precio, url")
+    .in("id_medicamento", medicamentoIds);
+
+  if (productosError) {
+    throw new Error(
+      "Error obteniendo productos: " + productosError.message
+    );
   }
 
   // 4. Obtener usuarios
@@ -45,19 +64,40 @@ export async function getActiveAlerts() {
   }
 
   // 5. Combinar los datos
-  const alertasCompletas = alertas.map(alerta => {
-    const medicamento = medicamentos?.find(m => m.id_medicamento === alerta.id_medicamento);
-    const usuario = usuarios?.find(u => u.id_usuario === alerta.id_usuario);
+  const alertasCompletas = alertas.map((alerta) => {
+    const medicamentoBase = medicamentos?.find(
+      (m) => m.id_medicamento === alerta.id_medicamento
+    );
+
+    const producto = productos?.find(
+      (p) => p.id_medicamento === alerta.id_medicamento
+    );
+
+    const usuario = usuarios?.find((u) => u.id_usuario === alerta.id_usuario);
+
+    // 🔹 armamos un objeto medicamento más completo
+    const medicamento =
+      medicamentoBase || producto
+        ? {
+            ...medicamentoBase,
+            // completamos farmacia y url desde vista_productos si existen
+            farmacia: producto?.farmacia ?? medicamentoBase?.farmacia ?? null,
+            precio: producto?.precio ?? null,
+            url_medicamento:
+              producto?.url ?? medicamentoBase?.url_medicamento ?? null,
+          }
+        : null;
 
     return {
       ...alerta,
-      medicamento: medicamento || null,
-      usuario: usuario || null
+      medicamento, // ahora con farmacia y precio cuando existan
+      usuario: usuario || null,
     };
   });
 
   return alertasCompletas;
 }
+
 
 // ---------------------------------------------------
 // 2) Obtener precio actual del medicamento

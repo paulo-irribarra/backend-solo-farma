@@ -11,6 +11,13 @@ export async function sendPriceAlertEmail(emailData) {
       precios,
     } = emailData;
 
+    console.log("emailData que se enviará:", {
+    to,
+    userName,
+    medicamento,
+    precios,
+    });
+
     await resend.emails.send({
       // OJO: corregido, antes estaba "alerts@notifications@solofarmacia.cl"
       from: "SoloFarma <alerts@notifications.solofarmacia.cl>",
